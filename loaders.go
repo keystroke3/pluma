@@ -3,6 +3,8 @@ package pluma
 import (
 	"flag"
 	"fmt"
+	"io"
+	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -16,7 +18,7 @@ type Loader interface {
 // All environment keys are assumed to be defined in UPPERCASE and all passed keys passed
 // to the function will be converted to uppercase before lookup.
 // Optional string `prefix` can be passed to only fetch values that start with that prefix
-// E.g. if prefix is set to `PROGRAM_` PROGRAM_RETRY will be set but RETRY will not
+// E.g. if prefix is set to `PROGRAM_` PROGRAM_RETRY will be used but RETRY will not
 func FromEnv(keys []string, s Setter, prefix ...string) {
 	var pfx string
 	if len(prefix) == 0 {
@@ -24,15 +26,16 @@ func FromEnv(keys []string, s Setter, prefix ...string) {
 	} else {
 		pfx = prefix[0]
 	}
+	log.Println("Prefix:", pfx)
 	for _, k := range keys {
-		val, set := os.LookupEnv(pfx + strings.ToUpper(k))
-		if set {
-			s.Set(k, val)
-		}
+		lookupStr := pfx + strings.ToUpper(k)
+		val, _ := os.LookupEnv(lookupStr)
+		s.Set(k, val)
 	}
 }
 
 // Sets config provider values for the given `keys` from cli flags
+// e.g. --retry=true  will load as retry="true"
 func FromFlags(keys []string, p Setter) {
 	for _, k := range keys {
 		f := flag.Lookup(k)
@@ -42,20 +45,30 @@ func FromFlags(keys []string, p Setter) {
 	}
 }
 
-// Loads listed options `opts` values from file f and sets them in provider p.
-// Delimiter d is used to distinguish the end of key and start of value. For example "="
-// An optional slice of comment prefixes can be passed to ignore lines prepended with those characters
-// e.g, if comment prefixes include "#" or "//", all lines begging with those characters are ignored
+// Wrapper around FromReader that takes a file name f as a string and creates a file reader
+// It then calls FromReader with the os.File as the reader
 func FromFile(f string, keys []string, p Setter, d string, c ...string) error {
 	err := isFile(f)
 	if err != nil {
 		return err
 	}
-	_f, err := os.ReadFile(f)
+	_f, err := os.Open(f)
 	if err != nil {
 		return err
 	}
-	lines := strings.Split(string(_f), "\n")
+	return FromReader(_f, keys, p, d, c...)
+}
+
+// Loads listed options `opts` values from reader r and sets them in provider p.
+// Delimiter d is used to distinguish the end of key and start of value. For example "="
+// An optional slice of comment prefixes can be passed to ignore lines prepended with those characters
+// e.g, if comment prefixes include "#" or "//", all lines begging with those characters are ignored
+func FromReader(r io.Reader, keys []string, p Setter, d string, c ...string) error {
+	b, err := io.ReadAll(r)
+	if err != nil {
+		return err
+	}
+	lines := strings.Split(string(b), "\n")
 	cfgs := make(map[string]string)
 	pattern := `^\s*(?:` + strings.Join(c, "|") + ").*"
 	regex, err := regexp.Compile(pattern)
@@ -83,23 +96,4 @@ func FromFile(f string, keys []string, p Setter, d string, c ...string) error {
 		}
 	}
 	return nil
-}
-
-var Options = map[string]Option{
-	"workDir": {
-		Name:  "workDir",
-		Value: ".",
-		Help:  "The directory to place working files such as migrations and databases",
-	},
-
-	"allowedOrigins": {
-		Name:  "allowedOrigins",
-		Value: "http://localhost:*,https://sala.pm",
-		Help:  "Comma separated allowed urls with one wildcard (*) per url for allowed. Use a single * to allow all",
-	},
-	"port": {
-		Name:  "port",
-		Value: "5000",
-		Help:  "The port for the server to listen on",
-	},
 }

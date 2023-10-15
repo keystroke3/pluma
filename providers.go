@@ -7,7 +7,7 @@ import (
 
 type Option struct {
 	Name  string
-	Value any
+	Value interface{}
 	Help  string
 }
 
@@ -102,32 +102,26 @@ type Float64Setter interface {
 
 // Creates a new instance of a configuration provider
 func DefaultProvider() (c *Config) {
-	return &Config{make(map[string]*Option)}
+	return &Config{make(map[string]interface{})}
 }
 
 // Creates a provider with given options by default
-func WithOptions(options map[string]*Option) (c *Config) {
+func WithOptions(options map[string]interface{}) (c *Config) {
 	return &Config{options}
 }
 
 type Config struct {
-	opts map[string]*Option
+	opts map[string]interface{}
 }
 
 // Returns the value of config with key k. The return type is undefined.
-// To get the value in a specific type, use any of the type specific methods:
+// To get the value in a specific type, use interface{} of the type specific methods:
 // GetString,GetInt,GetFloat64,GetFloat32 and GetBool
-func (c *Config) Get(k string) any {
-	if v, set := c.opts[k]; set {
-		return v.Value
-	}
-	return nil
+func (c *Config) Get(k string) interface{} {
+	return c.opts[k]
 }
-func (c *Config) Set(k string, v any) {
-	if v, set := c.opts[k]; set {
-		c.opts[k].Value = v
-	}
-	c.Insert(k, &Option{Name: k, Value: v})
+func (c *Config) Set(k string, v interface{}) {
+	c.opts[k] = v
 }
 
 func (c *Config) Load() {}
@@ -201,7 +195,7 @@ func (c *Config) Remove(name string, optn *Option) {
 	delete(c.opts, name)
 }
 
-func toInt(v any) (i int) {
+func toInt(v interface{}) (i int) {
 	if v == nil {
 		return
 	}
@@ -211,7 +205,7 @@ func toInt(v any) (i int) {
 	return
 }
 
-func toFloat(v any, bitSize int) (f float64) {
+func toFloat(v interface{}, bitSize int) (f float64) {
 	if v == nil {
 		return
 	}
@@ -221,7 +215,7 @@ func toFloat(v any, bitSize int) (f float64) {
 	return
 }
 
-func toBool(v any) (b bool) {
+func toBool(v interface{}) (b bool) {
 	if v == nil {
 		return
 	}
