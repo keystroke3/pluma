@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"regexp"
 	"strings"
@@ -26,7 +25,6 @@ func FromEnv(keys []string, s Setter, prefix ...string) {
 	} else {
 		pfx = prefix[0]
 	}
-	log.Println("Prefix:", pfx)
 	for _, k := range keys {
 		lookupStr := pfx + strings.ToUpper(k)
 		val, _ := os.LookupEnv(lookupStr)

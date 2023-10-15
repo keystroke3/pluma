@@ -42,14 +42,14 @@ func TestFromEnv(t *testing.T) {
 		name   string
 	}
 	var keys []string
-	var upper_keys []string
+	var upperKeys []string
 	for k, v := range options {
 		keys = append(keys, k)
-		upper_k := strings.ToUpper(k)
-		upper_keys = append(upper_keys, upper_k)
-		upperOptions[upper_k] = v
-		os.Setenv(upper_k, v)
-		os.Setenv(fmt.Sprintf("%v_%v", prefix, upper_k), v)
+		upperK := strings.ToUpper(k)
+		upperKeys = append(upperKeys, upperK)
+		upperOptions[upperK] = v
+		t.Setenv(upperK, v)
+		t.Setenv(fmt.Sprintf("%v%v", prefix, upperK), v)
 	}
 	unsetMap := map[string]string{
 		"LOREM": "",
@@ -74,12 +74,12 @@ func TestFromEnv(t *testing.T) {
 			name:   "Empty string slice, expect empty config",
 		},
 		{
-			keys:   upper_keys,
+			keys:   upperKeys,
 			expect: upperOptions,
 			name:   "Uppercase keys, expect full config",
 		},
 		{
-			keys:   upper_keys,
+			keys:   upperKeys,
 			prefix: prefix,
 			expect: upperOptions,
 			name:   "Uppercase with prefix keys, expect full config",
